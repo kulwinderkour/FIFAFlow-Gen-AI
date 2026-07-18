@@ -1,0 +1,82 @@
+# ============================================================
+#  FIFA3 – StadiumMind  |  .gitignore
+# ============================================================
+
+# ─── Environment & Secrets ──────────────────────────────────
+backend/.env
+.env
+.env.*
+!.env.example
+
+# ─── Python / FastAPI Backend ───────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+coverage.xml
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+
+# SQLite databases (runtime data)
+*.db
+*.sqlite
+*.sqlite3
+
+# ─── Node / Vite / React Frontend ───────────────────────────
+node_modules/
+frontend/dist/
+frontend/build/
+frontend/.vite/
+*.tsbuildinfo
+
+# Dependency lock files (keep package-lock.json but ignore yarn if not used)
+# package-lock.json  ← keep this, it's useful for reproducible installs
+
+# ─── Logs ───────────────────────────────────────────────────
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ─── OS Generated ───────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+ehthumbs.db
+desktop.ini
+
+# ─── IDE / Editor ───────────────────────────────────────────
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+*.swp
+*.swo
+
+# ─── Misc ───────────────────────────────────────────────────
+*.bak
+*.tmp
+*.orig

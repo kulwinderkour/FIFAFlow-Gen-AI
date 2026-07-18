@@ -1,0 +1,121 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-fifa-dark text-slate-100 min-h-screen overflow-x-hidden font-sans antialiased;
+  }
+}
+
+/* Glassmorphism Styles */
+.glass-panel {
+  background: rgba(11, 19, 43, 0.45);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.glass-panel-hover {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.glass-panel-hover:hover {
+  background: rgba(11, 19, 43, 0.6);
+  border-color: rgba(0, 180, 216, 0.4);
+  box-shadow: 0 0 20px rgba(0, 180, 216, 0.15);
+  transform: translateY(-2px);
+}
+
+/* Glowing Neon Elements */
+.glow-blue {
+  box-shadow: 0 0 15px rgba(0, 180, 216, 0.3);
+  border: 1px solid rgba(0, 180, 216, 0.5);
+}
+
+.glow-green {
+  box-shadow: 0 0 15px rgba(0, 230, 118, 0.3);
+  border: 1px solid rgba(0, 230, 118, 0.5);
+}
+
+.glow-gold {
+  box-shadow: 0 0 15px rgba(255, 215, 0, 0.3);
+  border: 1px solid rgba(255, 215, 0, 0.5);
+}
+
+.glow-red {
+  box-shadow: 0 0 20px rgba(255, 23, 68, 0.5);
+  border: 1px solid rgba(255, 23, 68, 0.7);
+  animation: pulse-red 2s infinite alternate;
+}
+
+@keyframes pulse-red {
+  0% {
+    box-shadow: 0 0 10px rgba(255, 23, 68, 0.4);
+  }
+  100% {
+    box-shadow: 0 0 25px rgba(255, 23, 68, 0.8);
+  }
+}
+
+/* Dark Theme Leaflet Customization */
+.leaflet-container {
+  background: #050a15 !important;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Dark tile filter to convert light street maps into beautiful dark neon boards */
+.dark-leaflet-tiles {
+  filter: invert(100%) hue-rotate(180deg) brightness(85%) contrast(90%) saturate(140%) !important;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #050a15;
+}
+::-webkit-scrollbar-thumb {
+  background: #1c2541;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #00b4d8;
+}
+
+/* High Contrast Mode overrides */
+.high-contrast {
+  --tw-bg-opacity: 1 !important;
+  background-color: #000000 !important;
+  color: #ffff00 !important;
+}
+
+.high-contrast .glass-panel {
+  background: #000000 !important;
+  border: 2px solid #ffff00 !important;
+  color: #ffff00 !important;
+}
+
+.high-contrast button, .high-contrast a {
+  border: 2px solid #ffff00 !important;
+  background-color: #000000 !important;
+  color: #ffff00 !important;
+}
+
+.high-contrast button:hover, .high-contrast a:hover {
+  background-color: #ffff00 !important;
+  color: #000000 !important;
+}
+
+.high-contrast svg {
+  stroke: #ffff00 !important;
+  fill: none !important;
+}
+.high-contrast input, .high-contrast select, .high-contrast textarea {
+  background-color: #000000 !important;
+  color: #ffff00 !important;
+  border: 2px solid #ffff00 !important;
+}
