@@ -1,6 +1,7 @@
-from pydantic import BaseModel, Field
-from typing import Dict, List, Optional
 from datetime import datetime
+from typing import List, Optional
+
+from pydantic import BaseModel, Field
 
 class AccessibilitySettings(BaseModel):
     stairless: bool = False
@@ -45,3 +46,7 @@ class SettingsUpdateRequest(BaseModel):
 class EmergencySimulateRequest(BaseModel):
     type: str = Field(..., max_length=50, description="Emergency scenario type")
     severity: str = Field("medium", max_length=20)
+
+class TransitPlanRequest(BaseModel):
+    query: str = Field(..., min_length=1, max_length=1000)
+    lang: str = Field("en", max_length=5)

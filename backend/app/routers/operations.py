@@ -1,10 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
-from app.database import get_db, DBSetting
-from app.schemas import SettingsUpdateRequest
-from app.services.simulator import StadiumSimulator
-from app.services.gemini_service import GeminiService
+
+from app.db_utils import upsert_setting
+from app.database import get_db
 from app.limiter import limiter
+from app.schemas import SettingsUpdateRequest
+from app.services.gemini_service import GeminiService
+from app.services.simulator import StadiumSimulator
 
 router = APIRouter(prefix="/operations", tags=["Operations Dashboard"])
 
@@ -31,28 +33,14 @@ def get_ai_recommendations(request: Request, db: Session = Depends(get_db)):
 def update_settings(request: Request, payload: SettingsUpdateRequest, db: Session = Depends(get_db)):
     try:
         if payload.weather is not None:
-            w_setting = db.query(DBSetting).filter(DBSetting.key == "weather").first()
-            if w_setting:
-                w_setting.value = payload.weather
-            else:
-                db.add(DBSetting(key="weather", value=payload.weather))
-                
+            upsert_setting(db, "weather", payload.weather)
         if payload.match_time_minutes is not None:
-            t_setting = db.query(DBSetting).filter(DBSetting.key == "match_time_minutes").first()
-            if t_setting:
-                t_setting.value = str(payload.match_time_minutes)
-            else:
-                db.add(DBSetting(key="match_time_minutes", value=str(payload.match_time_minutes)))
-                
+            upsert_setting(db, "match_time_minutes", str(payload.match_time_minutes))
         if payload.attendance is not None:
-            a_setting = db.query(DBSetting).filter(DBSetting.key == "attendance").first()
-            if a_setting:
-                a_setting.value = str(payload.attendance)
-            else:
-                db.add(DBSetting(key="attendance", value=str(payload.attendance)))
-                
+            upsert_setting(db, "attendance", str(payload.attendance))
+
         db.commit()
         return {"status": "success", "message": "Simulation settings updated"}
-    except Exception as e:
+    except Exception as exc:
         db.rollback()
-        raise HTTPException(status_code=500, detail=f"Settings update error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Settings update error: {exc}") from exc

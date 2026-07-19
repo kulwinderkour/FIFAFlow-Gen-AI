@@ -1,7 +1,13 @@
-from sqlalchemy import create_engine, Column, String, Integer, DateTime, Boolean, Text, func
-from sqlalchemy.orm import sessionmaker, DeclarativeBase
 import datetime
+import logging
+
+from sqlalchemy import Column, DateTime, Integer, String, Text, create_engine
+from sqlalchemy.orm import DeclarativeBase, sessionmaker
+
 from app.config import settings
+from app.db_utils import seed_database_defaults
+
+logger = logging.getLogger(__name__)
 
 engine = create_engine(
     settings.DATABASE_URL, connect_args={"check_same_thread": False} if "sqlite" in settings.DATABASE_URL else {}
@@ -47,28 +53,11 @@ class DBEmergencyState(Base):
 
 def init_db():
     Base.metadata.create_all(bind=engine)
-    # Seed default settings
     db = SessionLocal()
     try:
-        defaults = {
-            "weather": "Clear",
-            "match_time_minutes": "45",  # 45 minutes until match starts
-            "attendance": "68000",
-            "active_crisis": "none"
-        }
-        for k, v in defaults.items():
-            existing = db.query(DBSetting).filter(DBSetting.key == k).first()
-            if not existing:
-                db.add(DBSetting(key=k, value=v))
-        
-        # Check active crisis
-        crisis = db.query(DBEmergencyState).filter(DBEmergencyState.key == "active_crisis").first()
-        if not crisis:
-            db.add(DBEmergencyState(key="active_crisis", type="none", severity="low", instructions="", announcement=""))
-        
-        db.commit()
-    except Exception as e:
-        print(f"Error seeding DB: {e}")
+        seed_database_defaults(db)
+    except Exception as exc:
+        logger.error("Error seeding database: %s", exc)
         db.rollback()
     finally:
         db.close()

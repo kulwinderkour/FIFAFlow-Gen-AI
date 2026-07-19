@@ -1,7 +1,11 @@
-import random
 import datetime
+import random
+
 from sqlalchemy.orm import Session
-from app.database import DBSetting, DBEmergencyState
+
+from app.constants import INCLEMENT_WEATHER
+from app.database import DBEmergencyState
+from app.db_utils import get_setting_value
 
 class StadiumSimulator:
     @staticmethod
@@ -10,12 +14,10 @@ class StadiumSimulator:
         local_random = random.Random(42)
 
         # Fetch current dynamic settings
-        weather_setting = db.query(DBSetting).filter(DBSetting.key == "weather").first()
-        match_time_setting = db.query(DBSetting).filter(DBSetting.key == "match_time_minutes").first()
+        weather = get_setting_value(db, "weather", "Clear")
+        match_time = int(get_setting_value(db, "match_time_minutes", "45"))
+        attendance = int(get_setting_value(db, "attendance", "68000"))
         crisis_state = db.query(DBEmergencyState).filter(DBEmergencyState.key == "active_crisis").first()
-        
-        weather = weather_setting.value if weather_setting else "Clear"
-        match_time = int(match_time_setting.value) if match_time_setting else 45
         crisis_type = crisis_state.type if crisis_state else "none"
         
         # Calculate crowd factor based on time and weather
@@ -27,7 +29,7 @@ class StadiumSimulator:
         else:
             crowd_multiplier = 0.8 # match live or post match
             
-        if weather in ["Rain", "Heavy Rain", "Storm"]:
+        if weather in INCLEMENT_WEATHER:
             concession_multiplier = 1.3 # more people stay inside concourses
             transit_multiplier = 1.5 # delays
         else:
@@ -154,6 +156,7 @@ class StadiumSimulator:
             "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
             "weather": weather,
             "match_time_minutes": match_time,
+            "attendance": attendance,
             "active_crisis": crisis_type,
             "gates": gates,
             "food_courts": food_courts,

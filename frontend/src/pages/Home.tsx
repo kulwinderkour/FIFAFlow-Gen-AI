@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-  Users, ShieldAlert, Award, Compass, Heart, 
-  Leaf, Thermometer, CloudRain, AlertTriangle, ArrowRight 
+  Users, ShieldAlert, Award, Heart, 
+  Leaf, AlertTriangle, ArrowRight 
 } from 'lucide-react';
 import { api } from '../services/api';
 

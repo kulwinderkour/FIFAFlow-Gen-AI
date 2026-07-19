@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  Compass, Train, Bus, Car, Clock, Navigation, 
-  ArrowRight, RefreshCw, HelpCircle, CheckCircle2 
+  Compass, Train, Bus, Car,
+  ArrowRight, RefreshCw, CheckCircle2 
 } from 'lucide-react';
 import { api } from '../services/api';
 import { useAccessibility } from '../context/AccessibilityContext';

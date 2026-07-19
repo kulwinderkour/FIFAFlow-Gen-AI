@@ -28,6 +28,13 @@ class TestTelemetry:
             assert "current_flow" in gate_data
             assert "status" in gate_data
 
+    def test_telemetry_includes_attendance(self, client):
+        """Telemetry should expose configured attendance from settings."""
+        data = client.get("/api/operations/telemetry").json()
+        assert "attendance" in data
+        assert isinstance(data["attendance"], int)
+        assert data["attendance"] > 0
+
     def test_telemetry_food_courts_structure(self, client):
         """Each food court entry should have wait time and stock level."""
         data = client.get("/api/operations/telemetry").json()

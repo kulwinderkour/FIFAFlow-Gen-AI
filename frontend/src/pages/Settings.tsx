@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  Settings, Key, Languages, Accessibility, 
+  Key, Languages, Accessibility, 
   Trash2 
 } from 'lucide-react';
 import { useAccessibility } from '../context/AccessibilityContext';
 import { api } from '../services/api';
+import { LANGUAGE_OPTIONS } from '../constants/languages';
 
 export const SettingsPage: React.FC = () => {
   const { 
@@ -181,17 +182,10 @@ export const SettingsPage: React.FC = () => {
             </h3>
 
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-              {[
-                { code: 'en', name: 'English (US)' },
-                { code: 'es', name: 'Español' },
-                { code: 'fr', name: 'Français' },
-                { code: 'hi', name: 'हिन्दी (Hindi)' },
-                { code: 'ar', name: 'العربية (Arabic)' },
-                { code: 'pt', name: 'Português' },
-              ].map((lang) => (
+              {LANGUAGE_OPTIONS.map((lang) => (
                 <button
                   key={lang.code}
-                  onClick={() => setLanguage(lang.code as any)}
+                  onClick={() => setLanguage(lang.code)}
                   className={`p-3 rounded-xl border text-xs text-center font-semibold transition-all ${
                     language === lang.code 
                       ? 'border-fifa-teal bg-fifa-teal/20 text-fifa-teal shadow-neon-blue' 

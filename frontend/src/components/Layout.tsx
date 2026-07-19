@@ -1,13 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { 
   Home, MessageSquare, LayoutDashboard, UserCheck, 
   Compass, AlertOctagon, Accessibility, Settings, 
-  Volume2, VolumeX, Sun, CloudRain, Flame, Zap, 
-  AlertTriangle, Menu, X, Clock, HelpCircle
+  Volume2, VolumeX, Sun, CloudRain,
+  AlertTriangle, Menu, X, Clock
 } from 'lucide-react';
 import { useAccessibility } from '../context/AccessibilityContext';
 import { api } from '../services/api';
+import { LANGUAGE_OPTIONS } from '../constants/languages';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -17,7 +18,6 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const { 
     highContrast, setHighContrast, 
     voiceSupport, setVoiceSupport, 
-    largeText, setLargeText,
     language, setLanguage,
     speakText
   } = useAccessibility();
@@ -26,8 +26,8 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [telemetry, setTelemetry] = useState<any>(null);
   const [emergency, setEmergency] = useState<any>(null);
+  const lastAnnouncedCrisis = useRef<string>('none');
 
-  // Fetch live ticker data and emergency status
   const fetchData = async () => {
     try {
       const tel = await api.getTelemetry();
@@ -35,9 +35,13 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       const em = await api.getEmergencyStatus();
       setEmergency(em);
 
-      // Trigger TTS vocal alarm if emergency just activated
-      if (em.type !== 'none' && em.announcement) {
+      const crisisKey = `${em.type}:${em.announcement || ''}`;
+      if (em.type !== 'none' && em.announcement && lastAnnouncedCrisis.current !== crisisKey) {
+        lastAnnouncedCrisis.current = crisisKey;
         speakText(em.announcement);
+      }
+      if (em.type === 'none') {
+        lastAnnouncedCrisis.current = 'none';
       }
     } catch (e) {
       console.error(e);
@@ -60,14 +64,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     { name: 'Settings', path: '/settings', icon: Settings },
   ];
 
-  const languages = [
-    { code: 'en', label: 'EN' },
-    { code: 'es', label: 'ES' },
-    { code: 'fr', label: 'FR' },
-    { code: 'hi', label: 'HI' },
-    { code: 'ar', label: 'AR' },
-    { code: 'pt', label: 'PT' }
-  ];
+  const languages = LANGUAGE_OPTIONS;
 
   const getWeatherIcon = (w: string) => {
     if (w?.toLowerCase().includes('rain') || w?.toLowerCase().includes('storm')) {
@@ -223,7 +220,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                 </div>
                 <div className="flex items-center space-x-2 bg-slate-900/60 border border-slate-800 px-3 py-1.5 rounded-full">
                   <div className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-                  <span className="font-medium text-slate-300">Attendance: {telemetry.sustainability.solar_generation_kwh > 0 ? "68,000" : "62,500"}</span>
+                  <span className="font-medium text-slate-300">Attendance: {(telemetry.attendance ?? 68000).toLocaleString()}</span>
                 </div>
               </>
             )}
@@ -237,7 +234,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
               {languages.map((lang) => (
                 <button
                   key={lang.code}
-                  onClick={() => setLanguage(lang.code as any)}
+                  onClick={() => setLanguage(lang.code)}
                   className={`px-2 py-1 text-xs rounded font-bold transition-all ${
                     language === lang.code 
                       ? 'bg-fifa-teal text-fifa-dark shadow-neon-blue' 

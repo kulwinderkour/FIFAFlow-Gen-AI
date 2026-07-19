@@ -1,12 +1,22 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
-from app.database import get_db, DBEmergencyState, DBActiveIncident, DBSetting
-from app.schemas import EmergencySimulateRequest, IncidentRequest, IncidentResponse
-from app.services.simulator import StadiumSimulator
-from app.services.gemini_service import GeminiService
-from app.limiter import limiter
 import datetime
 import json
+
+from app.database import get_db, DBEmergencyState, DBActiveIncident, DBSetting
+from app.limiter import limiter
+from app.routers.emergency_helpers import (
+    CRISIS_SEVERITY_BY_TYPE,
+    apply_crisis_plan,
+    clear_active_crisis,
+    configure_crisis_weather,
+    parse_priority_actions,
+    serialize_incident,
+)
+from app.schemas import EmergencySimulateRequest, IncidentRequest, IncidentResponse
+from app.security import reject_suspicious_query
+from app.services.gemini_service import GeminiService
+from app.services.simulator import StadiumSimulator
 
 router = APIRouter(prefix="/emergency", tags=["Emergency Decision Center"])
 
@@ -22,25 +32,13 @@ def get_emergency_status(request: Request, db: Session = Depends(get_db)):
             "announcement": "",
             "priority_actions": []
         }
-    
-    # Try to unpack priority actions
-    priority_actions = []
-    if crisis.instructions:
-        try:
-            # Check if instructions has priority list
-            if crisis.instructions.startswith("["):
-                priority_actions = json.loads(crisis.instructions)
-            else:
-                priority_actions = [step.strip("- ") for step in crisis.instructions.split("\n") if step.strip()]
-        except Exception:
-            priority_actions = [crisis.instructions]
 
     return {
         "type": crisis.type,
         "severity": crisis.severity,
         "instructions": crisis.instructions,
         "announcement": crisis.announcement,
-        "priority_actions": priority_actions,
+        "priority_actions": parse_priority_actions(crisis.instructions),
         "timestamp": crisis.timestamp.isoformat()
     }
 
@@ -60,33 +58,14 @@ def simulate_emergency(request: Request, payload: EmergencySimulateRequest, db: 
         weather_setting = db.query(DBSetting).filter(DBSetting.key == "weather").first()
         
         if payload.type == "none":
-            crisis.severity = "low"
-            crisis.instructions = ""
-            crisis.announcement = ""
-            if weather_setting and weather_setting.value in ["Storm", "Heavy Rain"]:
-                weather_setting.value = "Clear"
+            clear_active_crisis(crisis, weather_setting)
         else:
-            # 1. Fetch latest telemetry for context
             telemetry = StadiumSimulator.get_stadium_telemetry(db)
-            
-            # Adjust global settings to match the crisis
-            if payload.type == "heavy_rain":
-                crisis.severity = "warning"
-                if weather_setting:
-                    weather_setting.value = "Heavy Rain"
-            elif payload.type == "fire_alarm":
-                crisis.severity = "critical"
-            elif payload.type == "power_failure":
-                crisis.severity = "critical"
-            elif payload.type == "medical_emergency":
-                crisis.severity = "warning"
-                
-            # 2. Call Gemini emergency analyzer
+            configure_crisis_weather(payload.type, weather_setting)
+            crisis.severity = CRISIS_SEVERITY_BY_TYPE.get(payload.type, "warning")
+
             ai_plan = GeminiService.analyze_emergency(payload.type, telemetry)
-            
-            crisis.severity = ai_plan.get("severity", "WARNING").lower()
-            crisis.instructions = "\n".join(ai_plan.get("priority_actions", [])) if isinstance(ai_plan.get("priority_actions"), list) else ai_plan.get("evacuation_strategy", "")
-            crisis.announcement = ai_plan.get("public_announcement", "")
+            apply_crisis_plan(crisis, payload.type, ai_plan)
             
         db.commit()
         return {
@@ -98,44 +77,20 @@ def simulate_emergency(request: Request, payload: EmergencySimulateRequest, db: 
                 "announcement": crisis.announcement
             }
         }
-    except Exception as e:
+    except Exception as exc:
         db.rollback()
-        raise HTTPException(status_code=500, detail=f"Emergency simulation failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Emergency simulation failed: {exc}") from exc
 
 @router.get("/incidents")
 @limiter.limit("100/minute")
 def get_incidents(request: Request, db: Session = Depends(get_db)):
     incidents = db.query(DBActiveIncident).order_by(DBActiveIncident.timestamp.desc()).all()
-    
-    result = []
-    for inc in incidents:
-        # Unpack SOP steps from comma/json list if applicable
-        sop_list = []
-        if inc.sop_steps:
-            try:
-                sop_list = json.loads(inc.sop_steps)
-            except Exception:
-                sop_list = [step.strip() for step in inc.sop_steps.split(",") if step.strip()]
-                
-        result.append({
-            "id": inc.id,
-            "type": inc.type,
-            "location": inc.location,
-            "description": inc.description,
-            "reported_by": inc.reported_by,
-            "status": inc.status,
-            "timestamp": inc.timestamp,
-            "sop_steps": sop_list,
-            "emergency_contact": inc.emergency_contact
-        })
-    return result
+    return [serialize_incident(inc) for inc in incidents]
 
 @router.post("/incidents", response_model=IncidentResponse)
 @limiter.limit("10/minute")
 def report_incident(request: Request, payload: IncidentRequest, db: Session = Depends(get_db)):
-    # Security Check: Prompt Injection Sanitization
-    if GeminiService.is_suspicious_query(payload.description):
-        raise HTTPException(status_code=400, detail="Potential security violation: Prompt injection detected.")
+    reject_suspicious_query(payload.description)
 
     try:
         # 1. Fetch current context

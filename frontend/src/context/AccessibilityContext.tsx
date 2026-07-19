@@ -1,18 +1,17 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-
-type LanguageType = 'en' | 'es' | 'fr' | 'hi' | 'ar' | 'pt';
+import { LanguageCode, SPEECH_LOCALES } from '../constants/languages';
 
 interface AccessibilityContextProps {
   stairless: boolean;
   largeText: boolean;
   highContrast: boolean;
   voiceSupport: boolean;
-  language: LanguageType;
+  language: LanguageCode;
   setStairless: (val: boolean) => void;
   setLargeText: (val: boolean) => void;
   setHighContrast: (val: boolean) => void;
   setVoiceSupport: (val: boolean) => void;
-  setLanguage: (lang: LanguageType) => void;
+  setLanguage: (lang: LanguageCode) => void;
   speakText: (text: string) => void;
   stopSpeaking: () => void;
 }
@@ -24,7 +23,7 @@ export const AccessibilityProvider: React.FC<{ children: React.ReactNode }> = ({
   const [largeText, setLargeText] = useState<boolean>(() => localStorage.getItem('access_largeText') === 'true');
   const [highContrast, setHighContrast] = useState<boolean>(() => localStorage.getItem('access_highContrast') === 'true');
   const [voiceSupport, setVoiceSupport] = useState<boolean>(() => localStorage.getItem('access_voiceSupport') === 'true');
-  const [language, setLanguage] = useState<LanguageType>(() => (localStorage.getItem('app_lang') as LanguageType) || 'en');
+  const [language, setLanguage] = useState<LanguageCode>(() => (localStorage.getItem('app_lang') as LanguageCode) || 'en');
 
   // Persist selections
   useEffect(() => {
@@ -63,14 +62,7 @@ export const AccessibilityProvider: React.FC<{ children: React.ReactNode }> = ({
     const utterance = new SpeechSynthesisUtterance(cleanText);
     
     // Select correct voice accent
-    const voiceLocales: Record<LanguageType, string> = {
-      en: 'en-US',
-      es: 'es-ES',
-      fr: 'fr-FR',
-      hi: 'hi-IN',
-      ar: 'ar-SA',
-      pt: 'pt-BR'
-    };
+    const voiceLocales = SPEECH_LOCALES;
     
     utterance.lang = voiceLocales[language];
     

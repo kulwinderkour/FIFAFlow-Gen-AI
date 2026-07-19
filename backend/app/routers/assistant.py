@@ -1,21 +1,27 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
-from typing import List
-from app.database import get_db, DBChatHistory
-from app.schemas import QueryRequest, QueryResponse
-from app.services.gemini_service import GeminiService
-from app.services.simulator import StadiumSimulator
-from app.limiter import limiter
 import datetime
 
+from app.database import get_db, DBChatHistory
+from app.limiter import limiter
+from app.schemas import QueryRequest, QueryResponse
+from app.security import reject_suspicious_query
+from app.services.gemini_service import GeminiService
+from app.services.simulator import StadiumSimulator
+
 router = APIRouter(prefix="/assistant", tags=["Fan Assistant"])
+
+
+def _save_chat_exchange(db: Session, query: str, answer: str) -> None:
+    """Persist a user query and assistant response to chat history."""
+    db.add(DBChatHistory(role="user", content=query, user_role="fan"))
+    db.add(DBChatHistory(role="assistant", content=answer, user_role="fan"))
+    db.commit()
 
 @router.post("/query", response_model=QueryResponse)
 @limiter.limit("10/minute")
 def fan_query(request: Request, payload: QueryRequest, db: Session = Depends(get_db)):
-    # Security Check: Prompt Injection Sanitization
-    if GeminiService.is_suspicious_query(payload.query):
-        raise HTTPException(status_code=400, detail="Potential security violation: Prompt injection detected.")
+    reject_suspicious_query(payload.query)
 
     # 1. Fetch current stadium telemetry as context
     telemetry = StadiumSimulator.get_stadium_telemetry(db)
@@ -32,17 +38,7 @@ def fan_query(request: Request, payload: QueryRequest, db: Session = Depends(get
     )
     
     # 4. Save to chat history
-    db.add(DBChatHistory(
-        role="user",
-        content=payload.query,
-        user_role="fan"
-    ))
-    db.add(DBChatHistory(
-        role="assistant",
-        content=answer,
-        user_role="fan"
-    ))
-    db.commit()
+    _save_chat_exchange(db, payload.query, answer)
     
     return QueryResponse(
         answer=answer,

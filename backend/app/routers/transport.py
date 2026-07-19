@@ -1,23 +1,19 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
+
 from app.database import get_db
-from app.services.simulator import StadiumSimulator
-from app.services.gemini_service import GeminiService
 from app.limiter import limiter
-from pydantic import BaseModel
+from app.schemas import TransitPlanRequest
+from app.security import reject_suspicious_query
+from app.services.gemini_service import GeminiService
+from app.services.simulator import StadiumSimulator
 
 router = APIRouter(prefix="/transport", tags=["Transport Planner"])
-
-class TransitPlanRequest(BaseModel):
-    query: str
-    lang: str = "en"
 
 @router.post("/plan")
 @limiter.limit("10/minute")
 def get_transit_plan(request: Request, payload: TransitPlanRequest, db: Session = Depends(get_db)):
-    # Security Check: Prompt Injection Sanitization
-    if GeminiService.is_suspicious_query(payload.query):
-        raise HTTPException(status_code=400, detail="Potential security violation: Prompt injection detected.")
+    reject_suspicious_query(payload.query)
 
     try:
         telemetry = StadiumSimulator.get_stadium_telemetry(db)

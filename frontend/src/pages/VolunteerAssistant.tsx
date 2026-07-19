@@ -4,10 +4,8 @@ import {
   CheckCircle, ArrowRight, ShieldCheck, ChevronDown, ChevronUp 
 } from 'lucide-react';
 import { api } from '../services/api';
-import { useAccessibility } from '../context/AccessibilityContext';
 
 export const VolunteerAssistant: React.FC = () => {
-  const { } = useAccessibility();
   const [incidents, setIncidents] = useState<any[]>([]);
   const [formType, setFormType] = useState('lost_child');
   const [locationInput, setLocationInput] = useState('Gate A Concourse');
@@ -252,7 +250,7 @@ export const VolunteerAssistant: React.FC = () => {
                           <div className="flex items-center space-x-2 text-xs">
                             <MapPin className="w-4 h-4 text-fifa-gold" />
                             <span className="font-bold text-slate-400">Nearby Desk:</span>
-                            <span className="text-slate-200">Gate A Main Desk</span>
+                            <span className="text-slate-200">{inc.info_desk || 'Gate A Main Desk'}</span>
                           </div>
                         </div>
 

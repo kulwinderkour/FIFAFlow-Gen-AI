@@ -1,11 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
   BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer,
-  LineChart, Line, CartesianGrid, PieChart, Pie, Cell 
+  LineChart, Line, CartesianGrid
 } from 'recharts';
 import { 
-  TrendingUp, Users, Shield, Clock, AlertTriangle, 
-  HelpCircle, RefreshCw, Zap, CheckCircle2, Sliders 
+  TrendingUp, Clock, RefreshCw, Zap, CheckCircle2, Sliders 
 } from 'lucide-react';
 import { api } from '../services/api';
 

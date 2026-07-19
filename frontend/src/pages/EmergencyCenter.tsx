@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  ShieldAlert, ShieldAlert as AlertIcon, Flame, Zap, 
-  CloudRain, Heart, EyeOff, Radio, Users, CheckSquare, 
-  ArrowRight, ShieldCheck, Play, BellRing, RefreshCw 
+  ShieldAlert, Flame, Zap, 
+  CloudRain, Heart, Radio, Users, CheckSquare, 
+  ShieldCheck, Play, BellRing
 } from 'lucide-react';
 import { api } from '../services/api';
 import { useAccessibility } from '../context/AccessibilityContext';

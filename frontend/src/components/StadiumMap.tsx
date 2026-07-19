@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Circle, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
-import { MapPin, Navigation, HelpCircle, AlertTriangle } from 'lucide-react';
 
 // Setup MetLife Stadium coordinates as central venue
 const STADIUM_CENTER: [number, number] = [40.8135, -74.0744];

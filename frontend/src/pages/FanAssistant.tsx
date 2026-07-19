@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
-  Send, Mic, MicOff, Volume2, HelpCircle, 
-  MapPin, Accessibility, Compass, Trash2 
+  Send, Mic, MicOff, Volume2,
+  Accessibility, Compass, Trash2 
 } from 'lucide-react';
 import { useAccessibility } from '../context/AccessibilityContext';
 import { api } from '../services/api';
 import { StadiumMap } from '../components/StadiumMap';
+import { FAN_ASSISTANT_INTROS, SPEECH_LOCALES } from '../constants/languages';
 
 interface Message {
   id: number;
@@ -15,7 +16,7 @@ interface Message {
 }
 
 export const FanAssistant: React.FC = () => {
-  const { stairless, setStairless, language, speakText, stopSpeaking } = useAccessibility();
+  const { stairless, setStairless, language, speakText, stopSpeaking, highContrast, largeText, voiceSupport } = useAccessibility();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [gate, setGate] = useState('Gate B');
@@ -35,18 +36,11 @@ export const FanAssistant: React.FC = () => {
         setMessages(history);
       } else {
         // Seed introductory message based on language
-        const intros: Record<string, string> = {
-          en: "Hello! I am StadiumMind AI, your official FIFA 2026 Assistant. Select your Gate & Seat to map your route, or ask me for concessions, restrooms, and elevators.",
-          es: "¡Hola! Soy StadiumMind AI, su asistente oficial de la FIFA 2026. Seleccione su puerta y asiento para trazar su ruta, o pregúnteme sobre puestos de comida, baños y ascensores.",
-          fr: "Bonjour! Je suis StadiumMind AI, votre assistant officiel de la FIFA 2026. Sélectionnez votre porte et votre siège pour tracer votre itinéraire, ou demandez-moi les toilettes, buvettes et ascenseurs.",
-          hi: "नमस्ते! मैं स्टेडियममाइंड एआई हूँ, आपका आधिकारिक फीफा 2026 सहायक। अपना गेट और सीट चुनें, या मुझसे शौचालय, भोजन स्टालों और लिफ्टों के बारे में पूछें।",
-          ar: "مرحباً! أنا StadiumMind AI، مساعدك الرسمي لكأس العالم FIFA 2026. اختر البوابة والمقعد لتحديد مسارك، أو اسألني عن دورات المياه، المطاعم، والمصاعد.",
-          pt: "Olá! Sou o StadiumMind AI, o seu Assistente oficial da FIFA 2026. Selecione o seu portão e assento para trazar a sua rota, ou pergunte-me sobre alimentação, banheiros e elevadores."
-        };
+        const intros = FAN_ASSISTANT_INTROS;
         setMessages([{
           id: 0,
           role: 'assistant',
-          content: intros[language] || intros['en'],
+          content: intros[language] || intros.en,
           timestamp: new Date().toISOString()
         }]);
       }
@@ -76,10 +70,7 @@ export const FanAssistant: React.FC = () => {
       rec.interimResults = false;
       
       // Map app language to recognition locale
-      const locales: Record<string, string> = {
-        en: 'en-US', es: 'es-ES', fr: 'fr-FR',
-        hi: 'hi-IN', ar: 'ar-SA', pt: 'pt-BR'
-      };
+      const locales = SPEECH_LOCALES;
       rec.lang = locales[language] || 'en-US';
 
       rec.onstart = () => setIsRecording(true);
@@ -125,9 +116,9 @@ export const FanAssistant: React.FC = () => {
     try {
       const res = await api.sendFanQuery(text, gate, seat, language, {
         stairless,
-        large_text: false,
-        high_contrast: false,
-        voice_support: true
+        large_text: largeText,
+        high_contrast: highContrast,
+        voice_support: voiceSupport,
       });
       
       const botMsg: Message = {

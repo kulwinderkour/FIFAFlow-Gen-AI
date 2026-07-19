@@ -1,10 +1,13 @@
-import os
+import functools
 import json
 import logging
-import functools
+
 import google.generativeai as genai
-from google.generativeai.types import HarmCategory, HarmBlockThreshold
+from google.generativeai.types import HarmBlockThreshold, HarmCategory
+
 from app.config import settings
+from app.constants import INCLEMENT_WEATHER, SUSPICIOUS_QUERY_PATTERNS
+from app.services.gemini_helpers import parse_gemini_json
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -22,6 +25,13 @@ if HAS_GEMINI_KEY:
 else:
     logger.info("No Gemini API key detected. Running in Local Simulation (Fallback) Mode.")
 
+GEMINI_SAFETY_SETTINGS = {
+    HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_LOW_AND_ABOVE,
+    HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_LOW_AND_ABOVE,
+    HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_LOW_AND_ABOVE,
+    HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_LOW_AND_ABOVE,
+}
+
 @functools.lru_cache(maxsize=128)
 def _cached_gemini_call(prompt: str, system_instruction: str) -> str:
     """Module-level LRU-cached Gemini API caller. Identical (prompt, system_instruction)
@@ -30,12 +40,7 @@ def _cached_gemini_call(prompt: str, system_instruction: str) -> str:
         model_name="gemini-1.5-flash",
         generation_config={"temperature": 0.4},
         system_instruction=system_instruction,
-        safety_settings={
-            HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_LOW_AND_ABOVE,
-            HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_LOW_AND_ABOVE,
-            HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_LOW_AND_ABOVE,
-            HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_LOW_AND_ABOVE,
-        }
+        safety_settings=GEMINI_SAFETY_SETTINGS,
     )
     response = model.generate_content(prompt)
     return response.text
@@ -47,25 +52,7 @@ class GeminiService:
         if not query:
             return False
         lower_query = query.lower()
-        suspicious_patterns = [
-            "ignore previous",
-            "ignore the above",
-            "system instruction",
-            "system prompt",
-            "bypass safety",
-            "override instructions",
-            "forget your instructions",
-            "forget everything",
-            "you are now a",
-            "jailbreak",
-            "dan mode",
-            "developer mode",
-            "disregard"
-        ]
-        for pattern in suspicious_patterns:
-            if pattern in lower_query:
-                return True
-        return False
+        return any(pattern in lower_query for pattern in SUSPICIOUS_QUERY_PATTERNS)
 
     @staticmethod
     def _call_gemini(prompt: str, system_instruction: str = "") -> str:
@@ -75,9 +62,9 @@ class GeminiService:
             raise ValueError("No API Key Available")
         try:
             return _cached_gemini_call(prompt, system_instruction)
-        except Exception as e:
-            logger.error(f"Gemini API invocation error: {e}. Falling back to simulator.")
-            raise e
+        except Exception as exc:
+            logger.error("Gemini API invocation error: %s. Falling back to simulator.", exc)
+            raise
 
     @classmethod
     def answer_fan_query(cls, query: str, context: dict, lang: str = "en", accessibility_mode: dict = None) -> str:
@@ -115,9 +102,7 @@ class GeminiService:
         
         try:
             raw_response = cls._call_gemini(user_prompt, system_prompt)
-            # Try to strip markdown code blocks if any
-            clean_response = raw_response.strip().replace("```json", "").replace("```", "")
-            return json.loads(clean_response)
+            return parse_gemini_json(raw_response)
         except Exception:
             return cls._fallback_ops_recommendations(telemetry, lang)
 
@@ -141,8 +126,7 @@ class GeminiService:
         
         try:
             raw_response = cls._call_gemini(user_prompt, system_prompt)
-            clean_response = raw_response.strip().replace("```json", "").replace("```", "")
-            return json.loads(clean_response)
+            return parse_gemini_json(raw_response)
         except Exception:
             return cls._fallback_volunteer_query(query, context, lang)
 
@@ -181,8 +165,7 @@ class GeminiService:
         
         try:
             raw_response = cls._call_gemini(user_prompt, system_prompt)
-            clean_response = raw_response.strip().replace("```json", "").replace("```", "")
-            return json.loads(clean_response)
+            return parse_gemini_json(raw_response)
         except Exception:
             return cls._fallback_emergency(emergency_type, telemetry, lang)
 
@@ -292,7 +275,7 @@ class GeminiService:
             })
 
         # Weather recommendations
-        if weather in ["Rain", "Heavy Rain", "Storm"]:
+        if weather in INCLEMENT_WEATHER:
             recs.append({
                 "title": "Distribute Complimentary Ponchos",
                 "action": "Mobilize standby volunteers to distribution centers near Gate entries to hand out recyclable ponchos.",
