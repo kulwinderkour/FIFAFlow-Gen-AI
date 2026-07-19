@@ -1,4 +1,5 @@
 import os
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -9,13 +10,20 @@ from app.routers import assistant, operations, transport, emergency
 from app.services.gemini_service import HAS_GEMINI_KEY
 import uvicorn
 
+# Initialize database schemas on startup with lifespan context manager
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    init_db()
+    yield
+
 # Rate limiter — keyed by IP address (200 req/min global, 10/min on AI endpoints)
 limiter = Limiter(key_func=get_remote_address, default_limits=["200/minute"])
 
 app = FastAPI(
     title="StadiumMind API",
     description="AI Stadium Operations & Fan Intelligence Platform for FIFA World Cup 2026",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan
 )
 
 # Attach rate limiter
@@ -36,11 +44,6 @@ app.add_middleware(
     allow_methods=["GET", "POST", "DELETE"],
     allow_headers=["Content-Type", "Authorization"],
 )
-
-# Initialize database schemas on startup
-@app.on_event("startup")
-def on_startup():
-    init_db()
 
 # Mount API Routers
 app.include_router(assistant.router, prefix="/api")

@@ -239,6 +239,7 @@ export const FanAssistant: React.FC = () => {
                     handleSend(e.target.checked ? "Map a stairless wheelchair-friendly route." : "Show standard route details.");
                   }}
                   className="w-4 h-4 accent-emerald-500 rounded cursor-pointer"
+                  aria-label="Stairless Access"
                 />
               </div>
             </div>
@@ -353,6 +354,7 @@ export const FanAssistant: React.FC = () => {
                 onChange={(e) => setInput(e.target.value)}
                 disabled={isRecording}
                 className="flex-1 bg-transparent text-xs text-slate-200 focus:outline-none disabled:text-slate-400"
+                aria-label="Fan query message"
               />
               
               {/* Mic Icon */}

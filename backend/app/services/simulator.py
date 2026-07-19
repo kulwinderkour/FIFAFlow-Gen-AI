@@ -1,4 +1,5 @@
 import random
+import datetime
 from sqlalchemy.orm import Session
 from app.database import DBSetting, DBEmergencyState
 
@@ -149,7 +150,7 @@ class StadiumSimulator:
         }
         
         return {
-            "timestamp": datetime.datetime.utcnow().isoformat(),
+            "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
             "weather": weather,
             "match_time_minutes": match_time,
             "active_crisis": crisis_type,

@@ -123,6 +123,7 @@ export const OperationsDashboard: React.FC = () => {
               value={weatherInput} 
               onChange={(e) => setWeatherInput(e.target.value)}
               className="bg-slate-900 border border-slate-800 text-xs rounded-lg px-2.5 py-1 text-slate-300"
+              aria-label="Select weather conditions"
             >
               <option>Clear</option>
               <option>Rain</option>
@@ -137,6 +138,7 @@ export const OperationsDashboard: React.FC = () => {
               value={minutesInput} 
               onChange={(e) => setMinutesInput(Number(e.target.value))}
               className="bg-slate-900 border border-slate-800 text-xs rounded-lg px-2.5 py-1 text-slate-300 w-16 text-center"
+              aria-label="Time to kickoff in minutes"
             />
           </div>
           <button 

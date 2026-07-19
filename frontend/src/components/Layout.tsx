@@ -170,6 +170,8 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         <button 
           onClick={() => setMobileOpen(!mobileOpen)}
           className="text-slate-200 focus:outline-none"
+          aria-label="Toggle navigation menu"
+          aria-expanded={mobileOpen}
         >
           {mobileOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
         </button>

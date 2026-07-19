@@ -139,6 +139,7 @@ export const SettingsPage: React.FC = () => {
                   checked={highContrast}
                   onChange={(e) => setHighContrast(e.target.checked)}
                   className="w-4 h-4 accent-fifa-teal"
+                  aria-label="Toggle High Contrast Mode"
                 />
               </div>
 
@@ -152,6 +153,7 @@ export const SettingsPage: React.FC = () => {
                   checked={largeText}
                   onChange={(e) => setLargeText(e.target.checked)}
                   className="w-4 h-4 accent-fifa-teal"
+                  aria-label="Toggle Large Fonts & Readable Graphics"
                 />
               </div>
 
@@ -165,6 +167,7 @@ export const SettingsPage: React.FC = () => {
                   checked={voiceSupport}
                   onChange={(e) => setVoiceSupport(e.target.checked)}
                   className="w-4 h-4 accent-fifa-teal"
+                  aria-label="Toggle Text to Speech Audio Reader"
                 />
               </div>
             </div>

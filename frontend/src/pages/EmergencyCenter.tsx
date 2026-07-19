@@ -210,8 +210,9 @@ export const EmergencyCenter: React.FC = () => {
                       <input 
                         type="checkbox"
                         checked={isChecked || false}
-                        onChange={() => {}}
+                        readOnly
                         className="w-4 h-4 mt-0.5 accent-emerald-500"
+                        aria-label={`Task: ${act}`}
                       />
                       <span className="text-xs leading-relaxed">{act}</span>
                     </div>

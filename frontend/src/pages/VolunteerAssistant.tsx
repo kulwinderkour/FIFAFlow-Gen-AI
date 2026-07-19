@@ -98,8 +98,9 @@ export const VolunteerAssistant: React.FC = () => {
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1.5">Incident Category</label>
+                <label htmlFor="incident-type" className="block text-[10px] uppercase font-bold text-slate-400 mb-1.5">Incident Category</label>
                 <select 
+                  id="incident-type"
                   value={formType}
                   onChange={(e) => setFormType(e.target.value)}
                   className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-slate-300 focus:outline-none focus:border-fifa-teal"
@@ -112,8 +113,9 @@ export const VolunteerAssistant: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1.5">Reporting Location</label>
+                <label htmlFor="incident-location" className="block text-[10px] uppercase font-bold text-slate-400 mb-1.5">Reporting Location</label>
                 <input 
+                  id="incident-location"
                   type="text" 
                   value={locationInput}
                   onChange={(e) => setLocationInput(e.target.value)}
@@ -123,8 +125,9 @@ export const VolunteerAssistant: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1.5">Describe what is happening</label>
+                <label htmlFor="incident-desc" className="block text-[10px] uppercase font-bold text-slate-400 mb-1.5">Describe what is happening</label>
                 <textarea 
+                  id="incident-desc"
                   rows={4}
                   value={descriptionInput}
                   onChange={(e) => setDescriptionInput(e.target.value)}
@@ -134,8 +137,9 @@ export const VolunteerAssistant: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-[10px] uppercase font-bold text-slate-400 mb-1.5">Log Identity</label>
+                <label htmlFor="incident-reporter" className="block text-[10px] uppercase font-bold text-slate-400 mb-1.5">Log Identity</label>
                 <input 
+                  id="incident-reporter"
                   type="text" 
                   value={reporterName}
                   onChange={(e) => setReporterName(e.target.value)}
