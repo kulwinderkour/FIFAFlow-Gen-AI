@@ -1,16 +1,22 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from typing import List
 from app.database import get_db, DBChatHistory
 from app.schemas import QueryRequest, QueryResponse
 from app.services.gemini_service import GeminiService
 from app.services.simulator import StadiumSimulator
+from app.limiter import limiter
 import datetime
 
 router = APIRouter(prefix="/assistant", tags=["Fan Assistant"])
 
 @router.post("/query", response_model=QueryResponse)
-def fan_query(payload: QueryRequest, db: Session = Depends(get_db)):
+@limiter.limit("10/minute")
+def fan_query(request: Request, payload: QueryRequest, db: Session = Depends(get_db)):
+    # Security Check: Prompt Injection Sanitization
+    if GeminiService.is_suspicious_query(payload.query):
+        raise HTTPException(status_code=400, detail="Potential security violation: Prompt injection detected.")
+
     # 1. Fetch current stadium telemetry as context
     telemetry = StadiumSimulator.get_stadium_telemetry(db)
     
@@ -44,7 +50,8 @@ def fan_query(payload: QueryRequest, db: Session = Depends(get_db)):
     )
 
 @router.get("/history")
-def get_chat_history(db: Session = Depends(get_db)):
+@limiter.limit("100/minute")
+def get_chat_history(request: Request, db: Session = Depends(get_db)):
     history = db.query(DBChatHistory).order_by(DBChatHistory.timestamp.asc()).all()
     return [
         {
@@ -58,7 +65,8 @@ def get_chat_history(db: Session = Depends(get_db)):
     ]
 
 @router.delete("/history")
-def clear_chat_history(db: Session = Depends(get_db)):
+@limiter.limit("20/minute")
+def clear_chat_history(request: Request, db: Session = Depends(get_db)):
     try:
         db.query(DBChatHistory).delete()
         db.commit()

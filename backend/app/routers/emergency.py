@@ -1,16 +1,18 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from app.database import get_db, DBEmergencyState, DBActiveIncident, DBSetting
 from app.schemas import EmergencySimulateRequest, IncidentRequest, IncidentResponse
 from app.services.simulator import StadiumSimulator
 from app.services.gemini_service import GeminiService
+from app.limiter import limiter
 import datetime
 import json
 
 router = APIRouter(prefix="/emergency", tags=["Emergency Decision Center"])
 
 @router.get("/status")
-def get_emergency_status(db: Session = Depends(get_db)):
+@limiter.limit("100/minute")
+def get_emergency_status(request: Request, db: Session = Depends(get_db)):
     crisis = db.query(DBEmergencyState).filter(DBEmergencyState.key == "active_crisis").first()
     if not crisis:
         return {
@@ -43,7 +45,8 @@ def get_emergency_status(db: Session = Depends(get_db)):
     }
 
 @router.post("/simulate")
-def simulate_emergency(payload: EmergencySimulateRequest, db: Session = Depends(get_db)):
+@limiter.limit("10/minute")
+def simulate_emergency(request: Request, payload: EmergencySimulateRequest, db: Session = Depends(get_db)):
     try:
         crisis = db.query(DBEmergencyState).filter(DBEmergencyState.key == "active_crisis").first()
         if not crisis:
@@ -100,7 +103,8 @@ def simulate_emergency(payload: EmergencySimulateRequest, db: Session = Depends(
         raise HTTPException(status_code=500, detail=f"Emergency simulation failed: {str(e)}")
 
 @router.get("/incidents")
-def get_incidents(db: Session = Depends(get_db)):
+@limiter.limit("100/minute")
+def get_incidents(request: Request, db: Session = Depends(get_db)):
     incidents = db.query(DBActiveIncident).order_by(DBActiveIncident.timestamp.desc()).all()
     
     result = []
@@ -127,7 +131,12 @@ def get_incidents(db: Session = Depends(get_db)):
     return result
 
 @router.post("/incidents", response_model=IncidentResponse)
-def report_incident(payload: IncidentRequest, db: Session = Depends(get_db)):
+@limiter.limit("10/minute")
+def report_incident(request: Request, payload: IncidentRequest, db: Session = Depends(get_db)):
+    # Security Check: Prompt Injection Sanitization
+    if GeminiService.is_suspicious_query(payload.description):
+        raise HTTPException(status_code=400, detail="Potential security violation: Prompt injection detected.")
+
     try:
         # 1. Fetch current context
         telemetry = StadiumSimulator.get_stadium_telemetry(db)
@@ -169,7 +178,8 @@ def report_incident(payload: IncidentRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail=f"Failed to log volunteer incident: {str(e)}")
 
 @router.post("/incidents/{incident_id}/resolve")
-def resolve_incident(incident_id: int, db: Session = Depends(get_db)):
+@limiter.limit("60/minute")
+def resolve_incident(request: Request, incident_id: int, db: Session = Depends(get_db)):
     incident = db.query(DBActiveIncident).filter(DBActiveIncident.id == incident_id).first()
     if not incident:
         raise HTTPException(status_code=404, detail="Incident not found")

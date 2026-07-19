@@ -2,9 +2,10 @@ import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.util import get_remote_address
+from slowapi.middleware import SlowAPIMiddleware
 from slowapi.errors import RateLimitExceeded
+from slowapi import _rate_limit_exceeded_handler
+from app.limiter import limiter
 from app.database import init_db
 from app.routers import assistant, operations, transport, emergency
 from app.services.gemini_service import HAS_GEMINI_KEY
@@ -16,9 +17,6 @@ async def lifespan(app: FastAPI):
     init_db()
     yield
 
-# Rate limiter — keyed by IP address (200 req/min global, 10/min on AI endpoints)
-limiter = Limiter(key_func=get_remote_address, default_limits=["200/minute"])
-
 app = FastAPI(
     title="StadiumMind API",
     description="AI Stadium Operations & Fan Intelligence Platform for FIFA World Cup 2026",
@@ -26,9 +24,33 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# Attach rate limiter
+# Attach rate limiter instance and exception handler
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+# Add SlowAPIMiddleware to ensure rate limit headers are added to responses
+app.add_middleware(SlowAPIMiddleware)
+
+# Custom HTTP Security Headers middleware
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Content-Security-Policy"] = (
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval'; "
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+        "font-src 'self' https://fonts.gstatic.com; "
+        "img-src 'self' data: blob: https://*.tile.openstreetmap.org https://images.unsplash.com; "
+        "connect-src 'self' ws: wss: http: https:;"
+    )
+    response.headers["Strict-Transport-Security"] = "max-age=63072000; includeSubDomains; preload"
+    # Obfuscate Server header
+    response.headers["Server"] = "StadiumMindServer"
+    return response
 
 # Configure CORS — restrict to known origins; set FRONTEND_ORIGIN env var for production
 ALLOWED_ORIGINS = list(set([

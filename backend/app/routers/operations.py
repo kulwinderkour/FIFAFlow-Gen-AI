@@ -1,21 +1,24 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from app.database import get_db, DBSetting
 from app.schemas import SettingsUpdateRequest
 from app.services.simulator import StadiumSimulator
 from app.services.gemini_service import GeminiService
+from app.limiter import limiter
 
 router = APIRouter(prefix="/operations", tags=["Operations Dashboard"])
 
 @router.get("/telemetry")
-def get_telemetry(db: Session = Depends(get_db)):
+@limiter.limit("100/minute")
+def get_telemetry(request: Request, db: Session = Depends(get_db)):
     try:
         return StadiumSimulator.get_stadium_telemetry(db)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Simulation telemetry error: {str(e)}")
 
 @router.get("/recommendations")
-def get_ai_recommendations(db: Session = Depends(get_db)):
+@limiter.limit("10/minute")
+def get_ai_recommendations(request: Request, db: Session = Depends(get_db)):
     try:
         telemetry = StadiumSimulator.get_stadium_telemetry(db)
         recs = GeminiService.generate_ops_recommendations(telemetry)
@@ -24,7 +27,8 @@ def get_ai_recommendations(db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail=f"AI recommendations generation error: {str(e)}")
 
 @router.post("/settings")
-def update_settings(payload: SettingsUpdateRequest, db: Session = Depends(get_db)):
+@limiter.limit("60/minute")
+def update_settings(request: Request, payload: SettingsUpdateRequest, db: Session = Depends(get_db)):
     try:
         if payload.weather is not None:
             w_setting = db.query(DBSetting).filter(DBSetting.key == "weather").first()

@@ -2,6 +2,7 @@ import os
 import json
 import logging
 import google.generativeai as genai
+from google.generativeai.types import HarmCategory, HarmBlockThreshold
 from app.config import settings
 
 # Setup logging
@@ -22,17 +23,49 @@ else:
 
 class GeminiService:
     @staticmethod
+    def is_suspicious_query(query: str) -> bool:
+        """Simple heuristic check for prompt injection or system bypass attempts."""
+        if not query:
+            return False
+        lower_query = query.lower()
+        suspicious_patterns = [
+            "ignore previous",
+            "ignore the above",
+            "system instruction",
+            "system prompt",
+            "bypass safety",
+            "override instructions",
+            "forget your instructions",
+            "forget everything",
+            "you are now a",
+            "jailbreak",
+            "dan mode",
+            "developer mode",
+            "disregard"
+        ]
+        for pattern in suspicious_patterns:
+            if pattern in lower_query:
+                return True
+        return False
+
+    @staticmethod
     def _call_gemini(prompt: str, system_instruction: str = "") -> str:
         """Helper to invoke Gemini API with a system prompt and handle failures."""
         if not HAS_GEMINI_KEY:
             raise ValueError("No API Key Available")
         
         try:
-            # Using gemini-1.5-flash as default model
+            # Using gemini-1.5-flash as default model with strict safety settings
             model = genai.GenerativeModel(
                 model_name="gemini-1.5-flash",
                 generation_config={"temperature": 0.4},
-                system_instruction=system_instruction
+                system_instruction=system_instruction,
+                safety_settings={
+                    HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_LOW_AND_ABOVE,
+                    HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_LOW_AND_ABOVE,
+                    HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_LOW_AND_ABOVE,
+                    HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_LOW_AND_ABOVE,
+                }
             )
             response = model.generate_content(prompt)
             return response.text
