@@ -6,6 +6,9 @@ from app.database import DBSetting, DBEmergencyState
 class StadiumSimulator:
     @staticmethod
     def get_stadium_telemetry(db: Session):
+        # Create local random generator to avoid side-effects on global random state
+        local_random = random.Random(42)
+
         # Fetch current dynamic settings
         weather_setting = db.query(DBSetting).filter(DBSetting.key == "weather").first()
         match_time_setting = db.query(DBSetting).filter(DBSetting.key == "match_time_minutes").first()
@@ -36,35 +39,33 @@ class StadiumSimulator:
             crowd_multiplier *= 1.4
             transit_multiplier *= 2.0
         
-        random.seed(42) # Seed to keep values relatively stable but with minor fluctuations
-        
         # Gates
         gates = {
             "Gate A": {
                 "capacity": 8000,
-                "current_flow": int(3200 + random.randint(-200, 200) * crowd_multiplier),
-                "scan_rate": int(45 + random.randint(-5, 5)),
+                "current_flow": int(3200 + local_random.randint(-200, 200) * crowd_multiplier),
+                "scan_rate": int(45 + local_random.randint(-5, 5)),
                 "security_lanes_open": 8,
                 "status": "normal" if crisis_type == "none" else "evacuation_exit"
             },
             "Gate B": {
                 "capacity": 5000,
-                "current_flow": int(1800 + random.randint(-150, 150) * crowd_multiplier),
-                "scan_rate": int(28 + random.randint(-3, 3)),
+                "current_flow": int(1800 + local_random.randint(-150, 150) * crowd_multiplier),
+                "scan_rate": int(28 + local_random.randint(-3, 3)),
                 "security_lanes_open": 5,
                 "status": "normal" if crisis_type == "none" else "evacuation_exit"
             },
             "Gate C": {
                 "capacity": 9000,
-                "current_flow": int(4100 + random.randint(-300, 300) * crowd_multiplier),
-                "scan_rate": int(52 + random.randint(-5, 5)),
+                "current_flow": int(4100 + local_random.randint(-300, 300) * crowd_multiplier),
+                "scan_rate": int(52 + local_random.randint(-5, 5)),
                 "security_lanes_open": 10,
                 "status": "normal" if crisis_type == "none" else "evacuation_exit"
             },
             "Gate D": {
                 "capacity": 4000,
-                "current_flow": int(800 + random.randint(-50, 50) * crowd_multiplier),
-                "scan_rate": int(12 + random.randint(-2, 2)),
+                "current_flow": int(800 + local_random.randint(-50, 50) * crowd_multiplier),
+                "scan_rate": int(12 + local_random.randint(-2, 2)),
                 "security_lanes_open": 3,
                 "status": "normal" if crisis_type != "fire_alarm" else "closed"
             }
@@ -73,22 +74,22 @@ class StadiumSimulator:
         # Food Courts
         food_courts = {
             "Food Court 1 (North Concourse)": {
-                "wait_time_minutes": int(15 * concession_multiplier + random.randint(-2, 3)),
-                "queue_length": int(25 * concession_multiplier + random.randint(-5, 5)),
+                "wait_time_minutes": int(15 * concession_multiplier + local_random.randint(-2, 3)),
+                "queue_length": int(25 * concession_multiplier + local_random.randint(-5, 5)),
                 "popular_item": "FIFA Classic Hotdog",
                 "stock_level": 82, # percentage
                 "food_waste_kg": 12.4
             },
             "Food Court 2 (East Concourse)": {
-                "wait_time_minutes": int(5 * concession_multiplier + random.randint(-1, 1)),
-                "queue_length": int(8 * concession_multiplier + random.randint(-2, 2)),
+                "wait_time_minutes": int(5 * concession_multiplier + local_random.randint(-1, 1)),
+                "queue_length": int(8 * concession_multiplier + local_random.randint(-2, 2)),
                 "popular_item": "Veggie Nachos",
                 "stock_level": 94,
                 "food_waste_kg": 4.1
             },
             "Food Court 3 (South Concourse)": {
-                "wait_time_minutes": int(28 * concession_multiplier + random.randint(-3, 4)),
-                "queue_length": int(42 * concession_multiplier + random.randint(-8, 8)),
+                "wait_time_minutes": int(28 * concession_multiplier + local_random.randint(-3, 4)),
+                "queue_length": int(42 * concession_multiplier + local_random.randint(-8, 8)),
                 "popular_item": "Angus Beef Burger",
                 "stock_level": 45, # high demand, potential waste or shortage
                 "food_waste_kg": 34.8 # excessive waste!
@@ -99,24 +100,24 @@ class StadiumSimulator:
         transit = {
             "Metro Line 1 (Stadium Station)": {
                 "frequency_minutes": 4 if crisis_type == "none" else 2,
-                "delay_minutes": int(2 * transit_multiplier + random.randint(0, 2)),
+                "delay_minutes": int(2 * transit_multiplier + local_random.randint(0, 2)),
                 "crowd_level": "High" if crowd_multiplier > 0.7 else "Medium",
                 "status": "operating"
             },
             "Bus Shuttle (Gate C Terminal)": {
                 "frequency_minutes": 8,
-                "delay_minutes": int(5 * transit_multiplier + random.randint(-1, 3)),
+                "delay_minutes": int(5 * transit_multiplier + local_random.randint(-1, 3)),
                 "crowd_level": "Very High" if crowd_multiplier > 0.8 else "Medium",
                 "status": "operating"
             },
             "Main Parking Lot A": {
                 "capacity": 3000,
-                "occupied": int(2780 + random.randint(-20, 20)),
-                "delay_minutes": int(10 * transit_multiplier + random.randint(-2, 4))
+                "occupied": int(2780 + local_random.randint(-20, 20)),
+                "delay_minutes": int(10 * transit_multiplier + local_random.randint(-2, 4))
             },
             "VIP Parking Lot B": {
                 "capacity": 500,
-                "occupied": int(320 + random.randint(-10, 10)),
+                "occupied": int(320 + local_random.randint(-10, 10)),
                 "delay_minutes": int(2 * transit_multiplier)
             }
         }
@@ -138,9 +139,9 @@ class StadiumSimulator:
         
         # Sustainability
         sustainability = {
-            "energy_usage_kwh": int(4500 + random.randint(-100, 100)),
+            "energy_usage_kwh": int(4500 + local_random.randint(-100, 100)),
             "solar_generation_kwh": 1200 if weather == "Clear" else 250,
-            "water_consumption_liters": int(25000 + random.randint(-1000, 1000)),
+            "water_consumption_liters": int(25000 + local_random.randint(-1000, 1000)),
             "waste_recycled_kg": 850,
             "waste_landfill_kg": 420,
             "insights": [

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Circle, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { MapPin, Navigation, HelpCircle, AlertTriangle } from 'lucide-react';
@@ -68,29 +68,18 @@ export const StadiumMap: React.FC<StadiumMapProps> = ({
   emergencyActive = 'none' 
 }) => {
   
-  // Calculate route polyline path if routing is requested
-  const getRoutePath = () => {
+  // Calculate route polyline path — memoized on routing/accessibility changes only
+  const routePath = useMemo(() => {
     if (!routeStart || !routeEnd) return null;
     const startNode = COORDINATES[routeStart];
-    // Guess destination node, fallback to Section A24
     const endNode = COORDINATES[routeEnd] || COORDINATES["Section A24"];
-    
     if (!startNode || !endNode) return null;
-
-    // Check if accessibility settings are active to guide route around stairs
-    const isAccessibilityRoute = highlightCategory === 'accessibility';
-    
-    // Draw route nodes (with mid-point check to simulate hallway structure)
-    if (isAccessibilityRoute) {
-      // route via Elevator lobby
-      const liftNode = COORDINATES["Elevator East Lobby"];
-      return [startNode, liftNode, endNode];
+    // Route via Elevator lobby when accessibility mode is active
+    if (highlightCategory === 'accessibility') {
+      return [startNode, COORDINATES["Elevator East Lobby"], endNode];
     }
-    
     return [startNode, endNode];
-  };
-
-  const routePath = getRoutePath();
+  }, [routeStart, routeEnd, highlightCategory]);
 
   // Determine heatmap coloring based on gate scans
   const getGateColor = (gateName: string) => {

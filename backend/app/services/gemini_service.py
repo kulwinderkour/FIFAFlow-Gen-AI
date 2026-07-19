@@ -1,6 +1,7 @@
 import os
 import json
 import logging
+import functools
 import google.generativeai as genai
 from google.generativeai.types import HarmCategory, HarmBlockThreshold
 from app.config import settings
@@ -20,6 +21,24 @@ if HAS_GEMINI_KEY:
         HAS_GEMINI_KEY = False
 else:
     logger.info("No Gemini API key detected. Running in Local Simulation (Fallback) Mode.")
+
+@functools.lru_cache(maxsize=128)
+def _cached_gemini_call(prompt: str, system_instruction: str) -> str:
+    """Module-level LRU-cached Gemini API caller. Identical (prompt, system_instruction)
+    pairs are served instantly from memory without making a new API call."""
+    model = genai.GenerativeModel(
+        model_name="gemini-1.5-flash",
+        generation_config={"temperature": 0.4},
+        system_instruction=system_instruction,
+        safety_settings={
+            HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_LOW_AND_ABOVE,
+            HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_LOW_AND_ABOVE,
+            HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_LOW_AND_ABOVE,
+            HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_LOW_AND_ABOVE,
+        }
+    )
+    response = model.generate_content(prompt)
+    return response.text
 
 class GeminiService:
     @staticmethod
@@ -50,25 +69,12 @@ class GeminiService:
 
     @staticmethod
     def _call_gemini(prompt: str, system_instruction: str = "") -> str:
-        """Helper to invoke Gemini API with a system prompt and handle failures."""
+        """Delegates to the module-level LRU-cached Gemini caller.
+        Identical (prompt, system_instruction) pairs are served from cache."""
         if not HAS_GEMINI_KEY:
             raise ValueError("No API Key Available")
-        
         try:
-            # Using gemini-1.5-flash as default model with strict safety settings
-            model = genai.GenerativeModel(
-                model_name="gemini-1.5-flash",
-                generation_config={"temperature": 0.4},
-                system_instruction=system_instruction,
-                safety_settings={
-                    HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_LOW_AND_ABOVE,
-                    HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_LOW_AND_ABOVE,
-                    HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_LOW_AND_ABOVE,
-                    HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_LOW_AND_ABOVE,
-                }
-            )
-            response = model.generate_content(prompt)
-            return response.text
+            return _cached_gemini_call(prompt, system_instruction)
         except Exception as e:
             logger.error(f"Gemini API invocation error: {e}. Falling back to simulator.")
             raise e

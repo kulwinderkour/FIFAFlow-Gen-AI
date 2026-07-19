@@ -7,7 +7,7 @@ import { api } from '../services/api';
 import { useAccessibility } from '../context/AccessibilityContext';
 
 export const VolunteerAssistant: React.FC = () => {
-  const { language } = useAccessibility();
+  const { } = useAccessibility();
   const [incidents, setIncidents] = useState<any[]>([]);
   const [formType, setFormType] = useState('lost_child');
   const [locationInput, setLocationInput] = useState('Gate A Concourse');

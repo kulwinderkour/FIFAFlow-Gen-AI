@@ -24,7 +24,7 @@ class DBActiveIncident(Base):
     description = Column(Text)
     reported_by = Column(String(100))
     status = Column(String(50), default="active")  # "active", "resolved"
-    timestamp = Column(DateTime, default=lambda: datetime.datetime.now(datetime.timezone.utc))
+    timestamp = Column(DateTime, default=lambda: datetime.datetime.now(datetime.timezone.utc), index=True)
     sop_steps = Column(Text, nullable=True)  # SOP instructions from AI
     emergency_contact = Column(String(100), nullable=True)
 
@@ -33,7 +33,7 @@ class DBChatHistory(Base):
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     role = Column(String(50))  # "user" or "assistant"
     content = Column(Text)
-    timestamp = Column(DateTime, default=lambda: datetime.datetime.now(datetime.timezone.utc))
+    timestamp = Column(DateTime, default=lambda: datetime.datetime.now(datetime.timezone.utc), index=True)
     user_role = Column(String(50), default="fan")  # "fan", "volunteer", "organizer", "staff"
 
 class DBEmergencyState(Base):

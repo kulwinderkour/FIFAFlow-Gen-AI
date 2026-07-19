@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer,
   LineChart, Line, CartesianGrid, PieChart, Pie, Cell 
@@ -62,8 +62,8 @@ export const OperationsDashboard: React.FC = () => {
     }, 1500);
   };
 
-  // Format Recharts data structures
-  const getGateChartData = () => {
+  // Format Recharts data structures — memoized to avoid rebuilding on every render
+  const gateChartData = useMemo(() => {
     if (!telemetry) return [];
     return Object.keys(telemetry.gates).map((gate) => ({
       name: gate,
@@ -71,9 +71,9 @@ export const OperationsDashboard: React.FC = () => {
       Flow: telemetry.gates[gate].current_flow,
       Capacity: telemetry.gates[gate].capacity
     }));
-  };
+  }, [telemetry]);
 
-  const getFoodChartData = () => {
+  const foodChartData = useMemo(() => {
     if (!telemetry) return [];
     return Object.keys(telemetry.food_courts).map((fc) => ({
       name: fc.split(' ')[2] || 'Court',
@@ -81,7 +81,7 @@ export const OperationsDashboard: React.FC = () => {
       Queue: telemetry.food_courts[fc].queue_length,
       Waste: telemetry.food_courts[fc].food_waste_kg
     }));
-  };
+  }, [telemetry]);
 
   const getPriorityColor = (p: string) => {
     switch (p.toLowerCase()) {
@@ -162,7 +162,7 @@ export const OperationsDashboard: React.FC = () => {
             </h3>
             <div className="h-[260px] w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={getGateChartData()}>
+                <BarChart data={gateChartData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
                   <XAxis dataKey="name" stroke="#94a3b8" fontSize={11} />
                   <YAxis stroke="#94a3b8" fontSize={11} />
@@ -185,7 +185,7 @@ export const OperationsDashboard: React.FC = () => {
             </h3>
             <div className="h-[260px] w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={getFoodChartData()}>
+                <LineChart data={foodChartData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
                   <XAxis dataKey="name" stroke="#94a3b8" fontSize={11} />
                   <YAxis yAxisId="left" stroke="#94a3b8" fontSize={11} />
